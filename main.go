@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -16,8 +14,13 @@ var stop chan struct{}
 var port = "8080"
 
 func main() {
+	reg := NewRegistry()
+
+	sh := NewStreamHandler()
+	sh.SetFilters(reg.filters)
+
 	router := http.NewServeMux()
-	router.HandleFunc("/", stream)
+	router.HandleFunc("/", sh.Handle)
 	http.Handle("/", router)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -61,53 +64,4 @@ func main() {
 	cancel()
 
 	defer os.Exit(0)
-}
-
-func stream(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	endChan := make(chan struct{})
-
-	go writeOutput(w, os.Stdin, endChan)
-
-	select {
-	case <-endChan:
-	case <-ctx.Done():
-		err := ctx.Err()
-		log.Printf("Client disconnected: %s\n", err)
-	}
-
-	stop <- struct{}{}
-	close(stop)
-}
-
-func writeOutput(w http.ResponseWriter, input io.ReadCloser, endChan chan struct{}) {
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
-		return
-	}
-
-	hdr := w.Header()
-	hdr.Set("Cache-Control", "no-cache")
-	hdr.Set("Connection", "keep-alive")
-	hdr.Set("X-Content-Type-Options", "nosniff")
-
-	reader := bufio.NewReader(input)
-
-	for {
-		in, _, err := reader.ReadLine()
-		if err != nil && err == io.EOF {
-			break
-		}
-
-		in = append(in, []byte("\n")...)
-		if _, err := w.Write(in); err != nil {
-			log.Fatalln(err)
-		}
-
-		flusher.Flush()
-	}
-
-	endChan <- struct{}{}
-	close(endChan)
 }
