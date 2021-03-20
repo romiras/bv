@@ -6,25 +6,31 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/romiras/bv/filters"
 )
 
 type StreamHandler struct {
-	filters []string
+	Filters []filters.IFilter
 }
 
 func NewStreamHandler() *StreamHandler {
+
 	return &StreamHandler{
-		filters: make([]string, 0),
+		Filters: make([]filters.IFilter, 0),
 	}
 }
 
 func (sh *StreamHandler) SetFilters(filters []string) {
 	if len(filters) > 0 {
-		sh.filters = filters
+		for _, filterName := range filters {
+			switch filterName {
+			}
+		}
 	}
 }
 
-func applyFilters(reader io.Reader) (io.Reader, error) {
+func (sh *StreamHandler) applyFilters(reader io.Reader) (io.Reader, error) {
 	// TODO Implement chain filtering here
 	return reader, nil
 }
@@ -38,7 +44,7 @@ func (sh *StreamHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	endChan := make(chan struct{})
 
-	filteredReader, err := applyFilters(os.Stdin)
+	filteredReader, err := sh.applyFilters(os.Stdin)
 	if err != nil {
 		return
 	}
