@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/romiras/bv/filters"
+	drivers "github.com/romiras/bv/filters/filter_drivers"
 )
 
 type StreamHandler struct {
@@ -25,14 +26,35 @@ func (sh *StreamHandler) SetFilters(filters []string) {
 	if len(filters) > 0 {
 		for _, filterName := range filters {
 			switch filterName {
+			case "ae":
+				sh.Filters = append(sh.Filters, drivers.NewAnsiTerminalToHTML())
 			}
 		}
 	}
 }
 
-func (sh *StreamHandler) applyFilters(reader io.Reader) (io.Reader, error) {
+func (sh *StreamHandler) applyFilters(r io.Reader) (io.Reader, error) {
 	// TODO Implement chain filtering here
-	return reader, nil
+
+	if len(sh.Filters) == 0 {
+		return r, nil
+	}
+
+	// var buf bytes.Buffer
+	// bw := bufio.NewWriter(&buf)
+
+	// bw := bufio.NewWriter(w)
+	// bw.Write()
+
+	rOut, w := io.Pipe()
+
+	filter := sh.Filters[0]
+	err := filter.Filter(r, w)
+	if err != nil {
+		return nil, err
+	}
+
+	return rOut, nil
 }
 
 func (sh *StreamHandler) Handle(w http.ResponseWriter, r *http.Request) {

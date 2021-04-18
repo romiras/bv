@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"strings"
 )
 
@@ -9,7 +10,8 @@ type Registry struct {
 }
 
 func NewRegistry() *Registry {
-	var filtersPtr *string
+	filtersPtr := flag.String("f", "ae", "Comma-separated names of filters")
+	flag.Parse()
 
 	filters := parseFilters(filtersPtr)
 
