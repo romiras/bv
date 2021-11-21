@@ -9,11 +9,13 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"time"
 )
 
 var stop chan struct{}
 var port = "8080"
+var osName = runtime.GOOS
 
 func main() {
 	router := http.NewServeMux()
@@ -38,7 +40,16 @@ func main() {
 	}()
 
 	go func() {
-		cmd := exec.Command("xdg-open", "http://localhost:"+port) // Linux desktop
+		var viewer string
+		switch osName {
+		case "darwin":
+			viewer = "open"
+		case "linux":
+			viewer = "xdg-open"
+		default:
+			viewer = "xdg-open"
+		}
+		cmd := exec.Command(viewer, "http://localhost:"+port) // Linux desktop
 		if err := cmd.Run(); err != nil {
 			log.Fatalln(err)
 			// return
